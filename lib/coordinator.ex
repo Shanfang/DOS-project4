@@ -26,42 +26,41 @@ defmodule Coordinator do
     """
     ######################### callbacks ####################
     def init(%{}) do
-        state = %{clients: %{}, total_tweets: 0}
+        state = %{user_list: []}
         {:ok, state}
     end
 
     def handle_call({:start_simulation, num_of_clients, serverID}, _from, state) do
-        init_clients(num_of_clients, serverID)
+        user_list = state[:user_list]
+        user_list = init_users(num_of_clients, serverID, user_list, 0)
         IO.puts "Finish initializing clients"
-        start_tweeting(num_of_clients)
+
+        start_tweet(num_of_clients)
         IO.puts "Clients start tweeting"
+        new_state = {state | user_list : user_list}
+        {:reply, :ok, new_state}
     end
 
     def handle_cast({:stop_simulator}, state) do
         IO.puts "Simulation is stopped, number of tweets sent is: " <> Integer.to_string(total_tweets)
-        #new_state = %{state | total_tweets: total_tweets}
-        #{:noreply, new_state}  
         {:noreply, state}      
     end 
     ######################### helper functions ####################
-    
-    defp init_clients(num_of_clients, serverID) do
-        for i <- 0..num_of_clients do
-            # worker is a client, it is inited with follwers and followings
-            # it is coordinator's work to randomly generate followers and followings for each client(worker)
-            
 
-            # implement zipf to generate followers and followings
-            followers = []
-            followings = []
-            Worker.start_link(i, followers, followings, serverID) 
-        end
+    def init_users(num_of_clients, serverID, user_list, num) when num < num_of_clients do
+        Worker.start_link(num) 
+        user_list = [Integer.to_string(num) | user_list]
+        init_users(num_of_clients, serverID, user_list, num + 1)
     end
 
-    defp start_tweeting() do
-        for i <- 0..num_of_clients do
-            client_pid = i |> Integer.to_string |> String.to_atom                    
-            Worker.start_tweet(client_pid)
+    def init_users(num_of_clients, serverID, user_list, num) do
+        user_list
+    end
+
+    defp start_tweet(num_of_clients) do
+        for i <- 0..(num_of_clients - 1) do
+            user_pid = i |> Integer.to_string |> String.to_atom                    
+            Worker.start_tweet(user_pid)
         end
     end
 end
