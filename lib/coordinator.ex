@@ -20,15 +20,18 @@ defmodule Coordinator do
         GenServer.call(coordinator, {:simulate_subscribe, following_num}, :infinity)
     end
 
+    def simulate_zipf_distribution(coordinator, limit) do
+        GenServer.call(coordinator, {:simulate_zipf_distribution, limit}, :infinity)
+    end
     ######################### callbacks ####################
     def init(num_of_clients) do
         :random.seed(:os.timestamp)
 
         # read tweets from a file, these tweets are used by users in the simulation process
         tweet_store = "tweet_store.txt"
-        |> File.read!
-        |> String.split("\n")
-        IO.puts "Finish initializing tweetstore..."
+                        |> File.read!
+                        |> String.split("\n")
+                        IO.puts "Finish initializing tweetstore..."
 
         # start all the users
         user_list = init_users(num_of_clients, [], 0)
@@ -51,6 +54,11 @@ defmodule Coordinator do
         simulate_subscribe(user_list, following_num)
         IO.puts "Finished subscription..."
         {:reply, :ok, state}
+    end
+
+    def handle_call({:simulate_zipf_distribution, limit}, _from, state) do
+        popular_users = get_popular_users(limit)
+        zipf_distribution_tweet(popular_users)
     end
 
     def handle_cast({:stop_simulator}, state) do
@@ -133,6 +141,42 @@ defmodule Coordinator do
 
     defp subscribe(following_num, total_user, following_list, count) do
         following_list
+    end
+
+    @doc """
+    Select users whose number of followers is >= limit, which means only select the popular users.
+    The criteria of popular or not is set by the parameter limit.
+    """
+    defp get_popular_users(limit) do
+        #select_followers = :ets.fun2ms(fn {username, followers} when length(followers) >= limit -> followers end)
+        select_users = :ets.fun2ms(fn {username, followers} when length(followers) >= limit -> username end)
+        
+        # popular_follower_list refers to all popular users' followers, each user has a popular follower list
+        #popular_follower_list = :ets.select(:follower_table, select_followers)
+        :ets.select(:follower_table, select_users)       
+    end
+
+    @doc """
+    Simulate zipf's distribution and only let popular users to send tweets.
+    The popular users randomly select tweet from the tweet store and tweet it.
+    The number of tweets each user is supposed to send can be configured in the config file,
+    here I use default 1.
+    """
+    defp zipf_distribution_tweet(popular_users) do
+        total_user = len(user_list)
+        Enum.each(popular_users, fn(user) ->
+            tweets = get_tweets(1) # 1 can be change to any number as required            
+            
+            worker_pid = String.to_atom(user)
+            Enum.each(tweets, fn(tweet) -> 
+                Worker.send_tweet(worker_pid, tweet)                                
+            end)                      
+        end)    
+    end
+ 
+    # I set num default to 1 in the test, so that it would not take too long time.
+    defp get_tweets(num) do
+        state[:tweet_store] |> Enum.shuffle |> List.first
     end
 
     defp start_tweet(num_of_clients) do

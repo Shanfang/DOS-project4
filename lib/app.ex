@@ -5,13 +5,14 @@ defmodule App do
     """
     def main(args) do
         clients = Enum.at(args, 0)
-        following_num = Enum.at(args, 1) 
+        following_num = Enum.at(args, 1)
+        limit = Enum.at(args, 1)
         num_of_clients = String.to_integer(clients)  
         following_num = String.to_integer(following_num)
-        loop(num_of_clients, following_num, 1)
+        loop(num_of_clients, following_num, limit, 1)
     end
 
-    def loop(num_of_clients, following_num, n) when n > 0 do            
+    def loop(num_of_clients, following_num, limit, n) when n > 0 do            
         Coordinator.start_link(num_of_clients)
         start_info = num_of_clients <> "users are started in the simulator..." 
         IO.puts start_info
@@ -22,17 +23,18 @@ defmodule App do
         Coordinator.simulate_subscribe(:coordinator, following_num)  
         IO.puts "Finished simulating subscription process..."
         
-        Coordinator.simulate_subscribe(:coordinator, following_num)  
-        IO.puts "Finished simulating subscription process..."
+        Coordinator.simulate_zipf_distribution(:coordinator, limit) 
+        zipf_info = "Finished selecting top " <> top <> " most popular users..."
+        IO.puts zipf_info
         
         Coordinator.simulate_subscribe(:coordinator, following_num)  
         IO.puts "Finished simulating subscription process..."
 
-        loop(num_of_clients, following_num, n - 1)
+        loop(num_of_clients, following_num, limit, n - 1)
     end
 
-    def loop(num_of_clients, following_num, n) do
+    def loop(num_of_clients, following_num, limit, n) do
         :timer.sleep 1000
-        loop(num_of_clients, following_num, n)
+        loop(num_of_clients, following_num, limit, n)
     end
 end

@@ -12,8 +12,8 @@ defmodule Worker do
         GenServer.call(worker_name, {:register_account, userID})
     end
 
-    def send_tweet(worker_name) do
-        GenServer.cast(worker_name, {:send_tweet})
+    def send_tweet(worker_name, tweet) do
+        GenServer.cast(worker_name, {:send_tweet, tweet})
     end
 
     def subscribe(worker_name, userID, to_followID) do
@@ -60,9 +60,7 @@ defmodule Worker do
         {:reply, register_status, new_state}
     end
 
-    def handle_cast({:send_tweet}, state) do
-        tweet = generate_tweet(state[:userID])
-
+    def handle_cast({:send_tweet, tweet}, state) do
         Server.send_tweet(tweet, state[:userID])
         tweets = [tweet | tweets]      
         new_state = %{state | tweets : tweets}        
