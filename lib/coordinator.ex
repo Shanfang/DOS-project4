@@ -23,6 +23,10 @@ defmodule Coordinator do
     def simulate_zipf_distribution(coordinator, limit) do
         GenServer.call(coordinator, {:simulate_zipf_distribution, limit}, :infinity)
     end
+    def simulate_query(coordinator) do
+        GenServer.call(coordinator, {:simulate_query}, :infinity)
+    end
+
     ######################### callbacks ####################
     def init(num_of_clients) do
         :random.seed(:os.timestamp)
@@ -59,6 +63,23 @@ defmodule Coordinator do
     def handle_call({:simulate_zipf_distribution, limit}, _from, state) do
         popular_users = get_popular_users(limit)
         zipf_distribution_tweet(popular_users)
+        {:reply, :ok, state}
+    end
+
+    def handle_call({:simulate_query}, _from, state) do
+        IO.puts "Start simulating query tweets subscribed to..."
+        subscriptions = query_subscription(state[:user_list])
+        print_tweets(subscriptions)
+
+        IO.puts "Start simulating query tweets by hashtag to..."
+        hashtag_tweets = query_by_hashtag(state[:user_list])
+        print_tweets(hashtag_tweets)
+
+        IO.puts "Start simulating query tweets that mentions this user..."
+        mention_tweets = query_by_mention(state[:user_list)]
+        print_tweets(mention_tweets)
+        
+        {:reply, :ok, state}
     end
 
     def handle_cast({:stop_simulator}, state) do
@@ -79,7 +100,7 @@ defmodule Coordinator do
     end
 
     @doc """
-    Simulate the process of user registering account
+    Simulate the process of user registering account.
     """
     defp simulate_register_account(user_list) do
         total_user = len(user_list)
@@ -179,10 +200,35 @@ defmodule Coordinator do
         state[:tweet_store] |> Enum.shuffle |> List.first
     end
 
-    defp start_tweet(num_of_clients) do
-        for i <- 0..(num_of_clients - 1) do
-            user_pid = i |> Integer.to_string |> String.to_atom                    
-            Worker.start_tweet(user_pid)
-        end
+    @doc """
+    For the following three query types, each randomly select 1 users to simulate query operation.
+    The return value is a list of tweets.
+    """
+    defp query_subscription(user_list) do
+        test_user = :rand.uniform(length(user_list)) - 1 |> Integer.to_string 
+        worker_pid = String.to_atom(test_user)
+        Worker.query(worker_pid, :subscription)
+    end
+
+    defp query_by_hashtag(user_list) do
+        test_user = :rand.uniform(length(user_list)) - 1 |> Integer.to_string
+        topic = state[:hashtag_store] |> Enum.shuffle |> List.first
+
+        worker_pid = String.to_atom(test_user)
+        hashtag_query = "#" <> topic
+        Worker.query(worker_pid, hashtag_query)
+    end
+
+    defp query_by_mention(user_list) do
+        test_user = :rand.uniform(length(user_list)) - 1 |> Integer.to_string 
+        worker_pid = String.to_atom(test_user)
+        mention_query = "@" <> test_user
+        Worker.query(worker_pid, mention_query)
+    end
+
+    defp print_tweets(tweets) do
+        Enum.each(tweets, fn(tweet) -> 
+            IO. puts tweet
+        end)
     end
 end

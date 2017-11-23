@@ -24,8 +24,8 @@ defmodule Worker do
         GenServer.cast(worker_name, {:retweet, tweet})
     end
 
-    def query_tweet(worker_name) do
-        GenServer.call(worker_name, {:query_tweet})
+    def query_tweet(worker_name, query) do
+        GenServer.call(worker_name, {:query_tweet, query})
     end
 
     def disconnect(worker_name) do
@@ -95,13 +95,9 @@ defmodule Worker do
         {:noreply, new_state}        
     end
 
-    def handle_call({:query_tweet}) do
-        # randomly select a hashtag/mention/tweet to query???????
-        query = generate_query
-        Server.query_tweet(query, state[:userID])
-        tweets = [tweet | tweets]      
-        new_state = %{state | tweets : tweets}        
-        {:reply, #############, new_state} 
+    def handle_call({:query_tweet, query}) do
+        query_result = Server.query_tweet(query, state[:userID])
+        {:reply, query_result, state} 
     end
 
     def handle_info ({:disconnect}) do
@@ -109,11 +105,5 @@ defmodule Worker do
     end
     ######################### helper functions ####################
 
-    defp select_tweet do
-        # randomly select a tweet for retweet
-    end
 
-    defp generate_query do
-        # randomly generate a query 
-    end
 end

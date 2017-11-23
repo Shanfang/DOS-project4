@@ -209,7 +209,9 @@ defmodule Server do
             end
     end
 
-
+    @doc """
+    Query is a string, it may contains #, @, or does not contain any of them.
+    """
     defp query_type(query) do
         result = 
             cond do

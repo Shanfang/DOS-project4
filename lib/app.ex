@@ -18,17 +18,17 @@ defmodule App do
         IO.puts start_info
 
         Coordinator.simulate_register_account(:coordinator)  
-        IO.puts "Finished simulating registeration process..."
+        IO.puts "Finished simulating registeration..."
 
         Coordinator.simulate_subscribe(:coordinator, following_num)  
-        IO.puts "Finished simulating subscription process..."
+        IO.puts "Finished simulating subscription..."
         
         Coordinator.simulate_zipf_distribution(:coordinator, limit) 
-        zipf_info = "Finished selecting top " <> top <> " most popular users..."
+        zipf_info = "Finished selecting popular users to send " <> limit <> " tweets..."
         IO.puts zipf_info
         
-        Coordinator.simulate_subscribe(:coordinator, following_num)  
-        IO.puts "Finished simulating subscription process..."
+        Coordinator.simulate_query(:coordinator)  
+        IO.puts "Finished simulating query tweets..."
 
         loop(num_of_clients, following_num, limit, n - 1)
     end
