@@ -5,21 +5,34 @@ defmodule App do
     """
     def main(args) do
         clients = Enum.at(args, 0)
-        #server = Enum.at(args, 1) 
+        following_num = Enum.at(args, 1) 
         num_of_clients = String.to_integer(clients)  
-        #serverID = String.to_integer(server) # need to further confirm serverID in node id form         
-        loop(num_of_clients, 1)
+        following_num = String.to_integer(following_num)
+        loop(num_of_clients, following_num, 1)
     end
 
-    def loop(num_of_clients, n) when n > 0 do            
-        Coordinator.start_link
-        IO.puts "Client simulator is started..." 
-        Coordinator.start_simulation(:coordinator, num_of_clients, serverID)
-        loop(num_of_clients, n - 1)
+    def loop(num_of_clients, following_num, n) when n > 0 do            
+        Coordinator.start_link(num_of_clients)
+        start_info = num_of_clients <> "users are started in the simulator..." 
+        IO.puts start_info
+
+        Coordinator.simulate_register_account(:coordinator)  
+        IO.puts "Finished simulating registeration process..."
+
+        Coordinator.simulate_subscribe(:coordinator, following_num)  
+        IO.puts "Finished simulating subscription process..."
+        
+        Coordinator.simulate_subscribe(:coordinator, following_num)  
+        IO.puts "Finished simulating subscription process..."
+        
+        Coordinator.simulate_subscribe(:coordinator, following_num)  
+        IO.puts "Finished simulating subscription process..."
+
+        loop(num_of_clients, following_num, n - 1)
     end
 
-    def loop(num_of_clients, n) do
+    def loop(num_of_clients, following_num, n) do
         :timer.sleep 1000
-        loop(num_of_clients, n)
+        loop(num_of_clients, following_num, n)
     end
 end

@@ -3,17 +3,21 @@ defmodule Worker do
 
     ######################### client API ####################
 
-    def start_link(index) do
-        worker_name = index |> Integer.to_string |> String.to_atom
-        GenServer.start_link(__MODULE__, {index}, [name: worker_name])
+    def start_link(ID) do
+        worker_name = ID |> String.to_atom
+        GenServer.start_link(__MODULE__, {ID}, [name: worker_name])
+    end
+
+    def register_account(worker_name, userID) do
+        GenServer.call(worker_name, {:register_account, userID})
     end
 
     def send_tweet(worker_name) do
         GenServer.cast(worker_name, {:send_tweet})
     end
 
-    def subscribe(worker_name, to_followID) do
-        GenServer.cast(worker_name, {:subscribe, to_followID})
+    def subscribe(worker_name, userID, to_followID) do
+        GenServer.call(worker_name, {:subscribe, userID, to_followID})
     end
 
     def retweet(worker_name, tweet) do
@@ -29,17 +33,31 @@ defmodule Worker do
     end
     ######################### callbacks ####################
 
-    def init({index}) do 
-        state = %{userID: "", connected: false, followers: [], followings: [], tweets: []}   
-        # connection API should return status = {userID, connection_status, followers, followings, tweets}
-        # the first time it is connected, followers, followings, tweets are []
-        status = register_account(userID, serverID)
-        connection_status = elem(status, 1}
-        followers = elem(status, 2}
-        followings = elem(status, 3}
-        tweets = elem(status, 4}
-        new_state = %{state | userID: Integer.to_string(index), connected: connection_status, followers: followers, followings: followings, tweets: tweets}
-        {:ok, new_state}
+    def init({ID}) do 
+        state = %{userID: ID, connected: false, followers: [], followings: [], tweets: []}   
+        {:ok, state}
+    end
+
+    @doc """
+    Connection API should return status = {userID, connection_status, followers, followings, tweets}
+    The first time it is connected, followers, followings, tweets are []
+    """
+    def handle_call({:register_account, userID}, _from, state) do
+        register_status = Server.register_account(userID)
+        connected = 
+            case register_status do
+                :ok ->
+                    true
+                :duplicate ->
+                    false
+            end
+        #status = Server.register_account(state[:userID])
+        #connection_status = elem(status, 1}
+        #followers = elem(status, 2}
+        #followings = elem(status, 3}
+        #tweets = elem(status, 4}
+        new_state = %{state | connected: connected, followers: [], followings: [], tweets: []}
+        {:reply, register_status, new_state}
     end
 
     def handle_cast({:send_tweet}, state) do
@@ -48,16 +66,25 @@ defmodule Worker do
         Server.send_tweet(tweet, state[:userID])
         tweets = [tweet | tweets]      
         new_state = %{state | tweets : tweets}        
-        {:ok, new_state}        
+        {:noreply, new_state}        
     end
 
-    def handle_cast({:subscribe, to_followID}, state) do
-        # add the tweets to client's tweets_list and display all the tweets if user check tweets
+    @doc """
+    Only add a new follower if the user successfully subscribes to it, i.e., the server returns :ok
+    """
+    def handle_call({:subscribe, userID, to_followID}, _from, state) do
+        subscribe_status = Server.subscribe(to_followID, userID)
+        case subscribe_status do
+            :ok -> 
+                followers = state[:followers]
+                follower_list = [to_followID | followers]
+                new_state = %{state | followers : follower_list}
+            :error ->
+                error_info = "Failed to subscribe to " <> to_followID
+                IO.puts error_info
+        end
 
-        Server.subscribe(to_followID, state[:userID], )
-        followers = [to_followID | followers]
-        new_state = %{state | followers : followers}
-        {:ok, new_state}
+        {:reply, subscribe_status, state}
     end
 
     def handle_cast({:retweet}, state) do
@@ -67,7 +94,7 @@ defmodule Worker do
         Server.re_tweet(tweet, state[:userID])
         tweets = [tweet | tweets]      
         new_state = %{state | tweets : tweets}        
-        {:ok, new_state}        
+        {:noreply, new_state}        
     end
 
     def handle_call({:query_tweet}) do
@@ -76,17 +103,13 @@ defmodule Worker do
         Server.query_tweet(query, state[:userID])
         tweets = [tweet | tweets]      
         new_state = %{state | tweets : tweets}        
-        {:ok, new_state} 
+        {:reply, #############, new_state} 
     end
 
     def handle_info ({:disconnect}) do
         # simulate disconnection
     end
     ######################### helper functions ####################
-    defp register_account(userID, serverID) do
-
-        # should return status indicting whether it is connected
-    end
 
     defp select_tweet do
         # randomly select a tweet for retweet
