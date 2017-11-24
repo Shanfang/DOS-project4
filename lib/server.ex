@@ -50,7 +50,7 @@ defmodule Server do
 
     @doc """
     When a registered user is connected, push all tweets from his/her subscription
-
+    """
     def handle_call({:connect, userID}, _from, state) do
         tweets = 
             case user_status(userID) do
@@ -62,7 +62,7 @@ defmodule Server do
             end
         {:reply, tweets, state}       
     end
-    """
+
     @doc """
     Insert userID to user_table if it has not registered, otherwise make no change to the table
     """

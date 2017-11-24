@@ -24,11 +24,14 @@ defmodule App do
         IO.puts "Finished simulating subscription..."
         
         Coordinator.simulate_zipf_distribution(:coordinator, limit) 
-        zipf_info = "Finished selecting popular users to send " <> limit <> " tweets..."
+        zipf_info = "Finished simuling zipf's law and selecting popular users to send " <> limit <> " tweets..."
         IO.puts zipf_info
         
         Coordinator.simulate_query(:coordinator)  
         IO.puts "Finished simulating query tweets..."
+
+        Coordinator.simulate_user_connection(:coordinator)  
+        IO.puts "Finished simulating user connection..."
 
         loop(num_of_clients, following_num, limit, n - 1)
     end

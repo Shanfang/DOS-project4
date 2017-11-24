@@ -28,8 +28,8 @@ defmodule Worker do
         GenServer.call(worker_name, {:query_tweet, query})
     end
 
-    def disconnect(worker_name) do
-        GenServer.cast(worker_name, {:disconnect})        
+    def connect(worker_name) do
+        GenServer.cast(worker_name, {:connect})        
     end
     ######################### callbacks ####################
 
@@ -97,13 +97,23 @@ defmodule Worker do
 
     def handle_call({:query_tweet, query}) do
         query_result = Server.query_tweet(query, state[:userID])
+        print_tweets(query_result)
         {:reply, query_result, state} 
     end
 
-    def handle_info ({:disconnect}) do
-        # simulate disconnection
+    def handle_call({:connect}, _from, state) do
+        #tweets = Server.connect(state[:userID])
+        #print_tweets(tweets)
+        Server.connect(state[:userID]) |> print_tweets
+        {:reply, :ok, state}
     end
+
     ######################### helper functions ####################
 
+    defp print_tweets(tweets) do
+        Enum.each(tweets, fn(tweet) -> 
+            IO. puts tweet
+        end)
+    end
 
 end
