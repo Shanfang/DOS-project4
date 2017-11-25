@@ -10,14 +10,6 @@ defmodule User do
         {:via, :gproc, {:n, :l, {:userPool, userID}}}
     end
 
-    def add_tweet(userID, tweet) do
-        GenServer.cast(via_tuple(userID), {:add_tweet, tweet})
-    end
-    
-    def get_tweets(userID) do
-    GenServer.call(via_tuple(userID), :get_tweets)
-    end
-
     def register_account(workerID, userID) do
         GenServer.call(via_tuple(workerID), {:register_account, userID})
     end
@@ -35,15 +27,6 @@ defmodule User do
         state = %{userID: "", connected: false, followers: [], followings: [], tweets: []}   
         #new_state = %{state | userID: userID}
         {:ok, state}  
-    end
-
-    def handle_cast({:add_tweet, tweet}, state) do
-        tweets = state[:tweets]
-        {:noreply, %{state | tweets: [tweet | tweets]}}
-    end
-
-    def handle_call(:get_tweets, _from, state) do
-    {:reply, state[:tweets], state}
     end
 
     def handle_call({:register_account, userID}, _from, state) do
