@@ -24,23 +24,24 @@ defmodule Coordinator do
         GenServer.call(coordinator, {:simulate_query}, :infinity)
     end
 
-    def simulate_user_connection do
+    def simulate_user_connection(coordinator) do
         GenServer.call(coordinator, {:simulate_user_connection}, :infinity)
     end
 
     ######################### callbacks ####################
     def init(num_of_clients) do
+        state = %{tweet_store: [], hashtag_store: [], user_list: []}
         :random.seed(:os.timestamp)
 
         # read tweets from a file, these tweets are used by users in the simulation process
         tweet_store = "tweet_store.txt"
                         |> File.read!
                         |> String.split("\n")
-                        IO.puts "Finish initializing tweetstore..."
+                        IO.puts "Finish initializing tweet store..."
         hashtag_store = "hashtag_store.txt"
                         |> File.read!
                         |> String.split("\n")
-                        IO.puts "Finish initializing tweetstore..."
+                        IO.puts "Finish initializing hashtag store..."
                         
         # start all the users
         user_list = init_users(num_of_clients, [], 0)
@@ -48,26 +49,27 @@ defmodule Coordinator do
         :ets.new(:following_table, [:set, :named_table, :protected])
         :ets.new(:follower_table, [:set, :named_table, :protected])
         
-        #new_state = %{state | tweet_store : tweet_store, user_list : user_list}
-        {:ok, %{tweet_store : tweet_store, hashtag_store : hashtag_store, user_list : user_list}}
+        new_state = %{state | tweet_store: tweet_store, hashtag_store: hashtag_store, user_list: user_list}
+        {:ok, new_state}
     end
 
-    def handle_call ({:simulate_register_account}, _from, state) do
-        simulate_register_account(state[:user_list])
+    def handle_call({:simulate_register_account}, _from, state) do
+        simulate_registeration(state[:user_list])
         {:reply, :ok, state}
     end
 
     def handle_call({:simulate_subscribe, following_num}, _from, state) do
         IO.puts "Start simulating subscription..."
         user_list = state[:user_list]
-        simulate_subscribe(user_list, following_num)
+        simulate_subscription(user_list, following_num)
         IO.puts "Finished subscription..."
         {:reply, :ok, state}
     end
 
     def handle_call({:simulate_zipf_distribution, limit}, _from, state) do
         popular_users = get_popular_users(limit)
-        zipf_distribution_tweet(popular_users)
+        tweetstore = state[:tweet_store]
+        zipf_distribution_tweet(popular_users, tweetstore)
         {:reply, :ok, state}
     end
 
@@ -78,12 +80,12 @@ defmodule Coordinator do
         #print_tweets(subscriptions)
 
         IO.puts "Start simulating query tweets by hashtag to..."
-        query_by_hashtag(state[:user_list])
+        query_by_hashtag(state[:user_list], state[:hashtag_store])
         #hashtag_tweets = query_by_hashtag(state[:user_list])
         #print_tweets(hashtag_tweets)
 
         IO.puts "Start simulating query tweets that mentions this user..."
-        query_by_mention(state[:user_list)]
+        query_by_mention(state[:user_list])
         #mention_tweets = query_by_mention(state[:user_list)]
         #print_tweets(mention_tweets)
         
@@ -92,7 +94,7 @@ defmodule Coordinator do
 
     # 5 is not a magic number(this can be set by user), I use this for simplity.
     def handle_call({:simulate_user_connection}, _from, state) do
-        simulate_user_connection(state[:user_list], 5)
+        simulate_connection(state[:user_list], 5)
         {:reply, :ok, state}        
     end
 
@@ -100,7 +102,7 @@ defmodule Coordinator do
 
     defp init_users(num_of_clients, user_list, num) when num < num_of_clients do
         user = num |> Integer.to_string         
-        Worker.start_link(user) 
+        User.start_link(user) 
         user_list = [user | user_list]
         init_users(num_of_clients, user_list, num + 1)
     end
@@ -112,11 +114,11 @@ defmodule Coordinator do
     @doc """
     Simulate the process of user registering account.
     """
-    defp simulate_register_account(user_list) do
-        total_user = len(user_list)
+    defp simulate_registeration(user_list) do
+        total_user = length(user_list)
         Enum.each(user_list, fn(user) ->
             user_pid = String.to_atom(user)
-            register_status = Worker.register_account(user_pid)
+            register_status = User.register_account(user_pid, user)
             register_info = user <> " has register status: " <> register_status
             IO.puts register_info
         end)
@@ -135,8 +137,8 @@ defmodule Coordinator do
     After finish subscription, each user's following list should be
     updated in the ETS following_table table.
     """
-    defp simulate_subscribe(user_list, following_num) do
-        total_user = len(user_list)
+    defp simulate_subscription(user_list, following_num) do
+        total_user = length(user_list)
         Enum.each(user_list, fn(user) ->
             followings = subscribe(user, following_num, total_user, [], 0)
             :ets.insert(:following_table, {user, followings})                                    
@@ -151,8 +153,8 @@ defmodule Coordinator do
             to_follow == user ->
                 subscribe(user, following_num, total_user, following_list, count) 
             true ->
-                worker_pid = String.to_atom(user)
-                subscribe_status = Worker.subscribe(worker_pid, user, to_follow)                
+                User_pid = String.to_atom(user)
+                subscribe_status = User.subscribe(User_pid, user, to_follow)                
                 case subscribe_status do
                     :ok -> 
                         # update to_follow user's follower list and upate the value in ETS table
@@ -193,21 +195,20 @@ defmodule Coordinator do
     The number of tweets each user is supposed to send can be configured in the config file,
     here I use default 1.
     """
-    defp zipf_distribution_tweet(popular_users) do
-        total_user = len(user_list)
+    defp zipf_distribution_tweet(popular_users, tweetstore) do
         Enum.each(popular_users, fn(user) ->
-            tweets = get_tweets(1) # 1 can be change to any number as required            
+            tweets = get_tweets(1, tweetstore) # 1 can be change to any number as required            
             
-            worker_pid = String.to_atom(user)
+            User_pid = String.to_atom(user)
             Enum.each(tweets, fn(tweet) -> 
-                Worker.send_tweet(worker_pid, tweet)                                
+                User.send_tweet(User_pid, tweet)                                
             end)                      
         end)    
     end
  
     # I set num default to 1 in the test, so that it would not take too long time.
-    defp get_tweets(num) do
-        state[:tweet_store] |> Enum.shuffle |> List.first
+    defp get_tweets(num, tweetstore) do
+        tweetstore |> Enum.shuffle |> List.first
     end
 
     @doc """
@@ -216,37 +217,37 @@ defmodule Coordinator do
     """
     defp query_subscription(user_list) do
         test_user = Enum.random(user_list)
-        worker_pid = String.to_atom(test_user)
-        Worker.query_tweet(worker_pid, :subscription)
+        User_pid = String.to_atom(test_user)
+        User.query_tweet(User_pid, :subscription)
     end
 
-    defp query_by_hashtag(user_list) do
+    defp query_by_hashtag(user_list, hashtag_store) do
         test_user = Enum.random(user_list)
 
         # take 3 random hashtags to query
-        #topics = Enum.take_random(state[:hashtag_store], 3)
-        #topic = state[:hashtag_store] |> Enum.shuffle |> List.first
-        topic = Enum.random(state[:hashtag_store])
-        worker_pid = String.to_atom(test_user)
+        #topics = Enum.take_random(hashtag_store, 3)
+        #topic = hashtag_store |> Enum.shuffle |> List.first
+        topic = Enum.random(hashtag_store)
+        User_pid = String.to_atom(test_user)
         hashtag_query = "#" <> topic
-        Worker.query_tweet(worker_pid, hashtag_query)
+        User.query_tweet(User_pid, hashtag_query)
     end
 
     defp query_by_mention(user_list) do
         test_user = Enum.random(user_list)
 
-        worker_pid = String.to_atom(test_user)
+        User_pid = String.to_atom(test_user)
         mention_query = "@" <> test_user
-        Worker.query_tweet(worker_pid, mention_query)
+        User.query_tweet(User_pid, mention_query)
     end
 
     @doc """
     Randomly take num users and simulate user connecting to the server.
     After successfully connected, the user should get tweets without querying them.
     """
-    defp simulate_user_connection(user_list, num) do
+    defp simulate_connection(user_list, num) do
         Enum.take_random(user_list, 5) 
             |> Enum.each(fn(user) -> 
-                user |> String.to_atom |> Worker.connect end)        
+                user |> String.to_atom |> User.connect end)        
     end
 end

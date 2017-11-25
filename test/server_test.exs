@@ -7,49 +7,84 @@ defmodule ServerTest do
       {:ok,server: server_pid}
     end
   
-    test "register account1" do
-      assert Server.register_account("shanfang") == "shanfang"
+    test "registeration" do
+      assert Server.register_account("shanfang") == :ok
+
+      assert Server.register_account("dobra") == :ok
+
+      assert Server.register_account("twitter") == :ok
     end
   
-    test "register account2" do
-      assert Server.register_account("dobra") == "dobra"
+    test "subscription" do
+      assert Server.register_account("shanfang") == :ok
+      
+      assert Server.register_account("dobra") == :ok
+
+      assert Server.register_account("twitter") == :ok
+
+      assert Server.subscribe("shanfang", "dobra") == :ok
+  
+      assert Server.subscribe("shanfang", "twitter") == :ok
+
+      assert Server.subscribe("twitter", "dobra") == :ok
+ 
+      assert Server.subscribe("dobra", "twitter") == :ok
     end
   
-    test "register account3" do
-      assert Server.register_account("twitter") == "twitter"
-    end
+    test "send tweet" do
+      assert Server.register_account("shanfang") == :ok
+      
+      assert Server.register_account("dobra") == :ok
+
+      assert Server.register_account("twitter") == :ok
+
+      assert Server.subscribe("shanfang", "dobra") == :ok
   
-    test "dobra subscribe to shanfang" do
-      assert Server.subscribe("shanfang", "dobra") == "dobra"
-    end
-  
-    test "twitter subscribe to shanfang" do
-      assert Server.subscribe("shanfang", "twitter") == "twitter"
-    end
-  
-    test "dobra subscribe to twitter" do
-      assert Server.subscribe("twitter", "dobra") == "dobra"
-    end
-  
-    test "twitter subscribe to dobra" do
-      assert Server.subscribe("dobra", "twitter") == "twitter"
-    end
-  
-    test "shanfang sends a plain tweet" do
+      assert Server.subscribe("shanfang", "twitter") == :ok
+
+      assert Server.subscribe("twitter", "dobra") == :ok
+ 
+      assert Server.subscribe("dobra", "twitter") == :ok
+
       assert Server.send_tweet("Twitter engine is cool!", "shanfang") == :ok
-    end
-  
-    test "shanfang sends a hashtag tweet" do
+     
       assert Server.send_tweet("We are celebrating #thanksgiving by coding all day!", "shanfang") == :ok
-    end
-  
-    test "shanfang sends a mention tweet" do
+      
       assert Server.send_tweet("Dr. @dobra, could you please make the description more clear?", "shanfang") == :ok
+      
     end
   
-    test "dobra checks his timeline by mention" do
-      assert :ets.lookup(:mention_table, "dobra") == ["Dr. @dobra, could you please make the description more clear?"]
-      assert Server.query_tweet("@dobra", "dobra") == ["Dr. @dobra, could you please make the description more clear?"]
+  
+    test "query tweet" do
+      assert Server.register_account("shanfang") == :ok
+      
+      assert Server.register_account("dobra") == :ok
+
+      assert Server.register_account("twitter") == :ok
+
+      assert Server.subscribe("shanfang", "dobra") == :ok
+  
+      assert Server.subscribe("shanfang", "twitter") == :ok
+
+      assert Server.subscribe("twitter", "dobra") == :ok
+ 
+      assert Server.subscribe("dobra", "twitter") == :ok
+
+      assert Server.send_tweet("Twitter engine is cool!", "shanfang") == :ok
+     
+      assert Server.send_tweet("We are celebrating #thanksgiving by coding all day!", "shanfang") == :ok
+      
+      assert Server.send_tweet("Dr. @dobra, could you please make the description more clear?", "shanfang") == :ok
+      
+      assert Server.query_tweet("anything", "twitter") == [ 
+                                                            "Dr. @dobra, could you please make the description more clear?",
+                                                            "We are celebrating #thanksgiving by coding all day!",
+                                                            "Twitter engine is cool!"
+                                                          ]
+      
+      assert Server.query_tweet("#thanksgiving", "twitter") == ["We are celebrating #thanksgiving by coding all day!"]
+      
+      #assert Server.query_tweet("@dobra", "dobra") == ["Dr. @dobra, could you please make the description more clear?"]
     end
     
   end

@@ -42,9 +42,9 @@ defmodule Server do
     
     # init the server with an empty table to store clients
     def init(:ok) do
-        :ets.new(:user_table, [:set, :named_table, :protected])
-        :ets.new(:hash_tag_table,[:bag, :named_table, :protected])
-        :ets.new(:mention_table,[:bag, :named_table, :protected])
+        :ets.new(:user_table, [:set, :named_table, :public])
+        :ets.new(:hash_tag_table,[:bag, :named_table, :public])
+        :ets.new(:mention_table,[:bag, :named_table, :public])
         {:ok, :ok}
     end
 
@@ -55,7 +55,7 @@ defmodule Server do
         tweets = 
             case user_status(userID) do
                 :ok ->
-                    :ets.lookup(:user_table, userID) |> List.first |> elem(user_tuple, 3)
+                    :ets.lookup(:user_table, userID) |> List.first |> elem(3)
                 :error ->
                     IO.puts "You are not registered, try it out now!"
                     []

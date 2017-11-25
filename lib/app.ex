@@ -6,7 +6,7 @@ defmodule App do
     def main(args) do
         clients = Enum.at(args, 0)
         following_num = Enum.at(args, 1)
-        limit = Enum.at(args, 1)
+        limit = Enum.at(args, 2)
         num_of_clients = String.to_integer(clients)  
         following_num = String.to_integer(following_num)
         loop(num_of_clients, following_num, limit, 1)
@@ -33,7 +33,7 @@ defmodule App do
         Coordinator.simulate_user_connection(:coordinator)  
         IO.puts "Finished simulating user connection..."
 
-        loop(num_of_clients, following_num, limit, n - 1)
+        #loop(num_of_clients, following_num, limit, n - 1)
     end
 
     def loop(num_of_clients, following_num, limit, n) do
