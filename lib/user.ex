@@ -11,7 +11,7 @@ defmodule User do
     end
 
     def register_account(workerID, userID) do
-        GenServer.call(via_tuple(workerID), {:register_account, userID})
+        GenServer.call(via_tuple(workerID), {:register_account, userID}, :infinity)
     end
 
     def send_tweet(workerID, tweet) do
@@ -19,11 +19,11 @@ defmodule User do
     end
 
     def subscribe(workerID, userID, to_followID) do
-        GenServer.call(via_tuple(workerID), {:subscribe, userID, to_followID})
+        GenServer.call(via_tuple(workerID), {:subscribe, userID, to_followID}, :infinity)
     end
 
     def query_tweet(workerID, query) do
-        GenServer.call(via_tuple(workerID), {:query_tweet, query})
+        GenServer.call(via_tuple(workerID), {:query_tweet, query}, :infinity)
     end
     ######################### callbacks ####################
 
@@ -32,7 +32,7 @@ defmodule User do
         #new_state = %{state | userID: userID}
         {:ok, state}  
     end
-    
+
     @doc """
     Connection API should return status = {userID, connection_status, followers, followings, tweets}
     The first time it is connected, followers, followings, tweets are []

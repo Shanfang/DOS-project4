@@ -1,4 +1,5 @@
 defmodule Coordinator do
+    
     use GenServer
 
     ######################### client API ####################
@@ -45,7 +46,7 @@ defmodule Coordinator do
                         
         # start all the users
         user_list = init_users(num_of_clients, [], 0)
-        IO.puts "All the users are initiated..."
+        #IO.puts "All the users are initiated..."
         :ets.new(:following_table, [:set, :named_table, :protected])
         :ets.new(:follower_table, [:set, :named_table, :protected])
         
@@ -62,7 +63,6 @@ defmodule Coordinator do
         IO.puts "Start simulating subscription..."
         user_list = state[:user_list]
         simulate_subscription(user_list, following_num)
-        IO.puts "Finished subscription..."
         {:reply, :ok, state}
     end
 
@@ -117,10 +117,10 @@ defmodule Coordinator do
     defp simulate_registeration(user_list) do
         total_user = length(user_list)
         Enum.each(user_list, fn(user) ->
-            user_pid = String.to_atom(user)
-            register_status = User.register_account(user_pid, user)
-            register_info = user <> " has register status: " <> register_status
-            IO.puts register_info
+            #user_pid = String.to_atom(user)
+            #register_status = User.register_account(user_pid, user)
+            register_status = User.register_account(user, user)
+            IO.puts "#{inspect user} has register status: #{ register_status}"
         end)
     end
 
@@ -153,8 +153,10 @@ defmodule Coordinator do
             to_follow == user ->
                 subscribe(user, following_num, total_user, following_list, count) 
             true ->
-                User_pid = String.to_atom(user)
-                subscribe_status = User.subscribe(User_pid, user, to_follow)                
+                #User_pid = String.to_atom(user)                
+                #subscribe_status = User.subscribe(User_pid, user, to_follow) 
+                subscribe_status = User.subscribe(user, user, to_follow) 
+
                 case subscribe_status do
                     :ok -> 
                         # update to_follow user's follower list and upate the value in ETS table
@@ -172,7 +174,7 @@ defmodule Coordinator do
         end
     end
 
-    defp subscribe(following_num, total_user, following_list, count) do
+    defp subscribe(user, following_num, total_user, following_list, count) do
         following_list
     end
 
@@ -182,11 +184,13 @@ defmodule Coordinator do
     """
     defp get_popular_users(limit) do
         #select_followers = :ets.fun2ms(fn {username, followers} when length(followers) >= limit -> followers end)
-        select_users = :ets.fun2ms(fn {username, followers} when length(followers) >= limit -> username end)
+        
+        #fun = :ets.fun2ms(fn {username, followers} when length(followers) >= 2 -> username end)
         
         # popular_follower_list refers to all popular users' followers, each user has a popular follower list
         #popular_follower_list = :ets.select(:follower_table, select_followers)
-        :ets.select(:follower_table, select_users)       
+        #:ets.select(:follower_table, fun)  
+        :ets.select(:follower_table, [{{:"$1", :"$2"}, [{:>=, {:length, :"$2"}, 2}], [:"$1"]}])    
     end
 
     @doc """
@@ -197,12 +201,11 @@ defmodule Coordinator do
     """
     defp zipf_distribution_tweet(popular_users, tweetstore) do
         Enum.each(popular_users, fn(user) ->
-            tweets = get_tweets(1, tweetstore) # 1 can be change to any number as required            
-            
-            User_pid = String.to_atom(user)
-            Enum.each(tweets, fn(tweet) -> 
-                User.send_tweet(User_pid, tweet)                                
-            end)                      
+            tweet = get_tweets(1, tweetstore) # 1 can be change to any number as required            
+            User.send_tweet(user, tweet)                                                          
+            #Enum.each(tweets, fn(tweet) -> 
+            #    User.send_tweet(user, tweet)                                                
+            #end)                      
         end)    
     end
  
@@ -211,14 +214,18 @@ defmodule Coordinator do
         tweetstore |> Enum.shuffle |> List.first
     end
 
+    defp tweet_zipf()do
+        
+    end
     @doc """
     For the following three query types, each randomly select 1 users to simulate query operation.
     The return value is a list of tweets.
     """
     defp query_subscription(user_list) do
         test_user = Enum.random(user_list)
-        User_pid = String.to_atom(test_user)
-        User.query_tweet(User_pid, :subscription)
+        #User_pid = String.to_atom(test_user)
+        #User.query_tweet(User_pid, :subscription)
+        User.query_tweet(test_user, "")        
     end
 
     defp query_by_hashtag(user_list, hashtag_store) do
@@ -228,17 +235,18 @@ defmodule Coordinator do
         #topics = Enum.take_random(hashtag_store, 3)
         #topic = hashtag_store |> Enum.shuffle |> List.first
         topic = Enum.random(hashtag_store)
-        User_pid = String.to_atom(test_user)
+        #User_pid = String.to_atom(test_user)
         hashtag_query = "#" <> topic
-        User.query_tweet(User_pid, hashtag_query)
+        #User.query_tweet(User_pid, hashtag_query)
+        User.query_tweet(test_user, hashtag_query)        
     end
 
     defp query_by_mention(user_list) do
         test_user = Enum.random(user_list)
 
-        User_pid = String.to_atom(test_user)
+        #User_pid = String.to_atom(test_user)
         mention_query = "@" <> test_user
-        User.query_tweet(User_pid, mention_query)
+        User.query_tweet(test_user, mention_query)
     end
 
     @doc """

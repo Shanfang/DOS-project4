@@ -13,9 +13,11 @@ defmodule App do
     end
 
     def loop(num_of_clients, following_num, limit, n) when n > 0 do            
+        Server.start_link
+        IO.puts "Server is up and running..."
+        
         Coordinator.start_link(num_of_clients)
-        start_info = num_of_clients <> "users are started in the simulator..." 
-        IO.puts start_info
+        IO.puts "#{inspect num_of_clients} users are started in the simulator..." 
 
         Coordinator.simulate_register_account(:coordinator)  
         IO.puts "Finished simulating registeration..."
@@ -30,8 +32,8 @@ defmodule App do
         Coordinator.simulate_query(:coordinator)  
         IO.puts "Finished simulating query tweets..."
 
-        Coordinator.simulate_user_connection(:coordinator)  
-        IO.puts "Finished simulating user connection..."
+        #Coordinator.simulate_user_connection(:coordinator)  
+        #IO.puts "Finished simulating user connection..."
 
         #loop(num_of_clients, following_num, limit, n - 1)
     end

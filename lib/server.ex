@@ -28,7 +28,7 @@ defmodule Server do
     end
 
     def query_tweet(query, userID) do
-        GenServer.call(@name, {:query_tweet, query, userID})        
+        GenServer.call(@name, {:query_tweet, query, userID}, :infinity)        
     end
 
     def connect(userID) do
