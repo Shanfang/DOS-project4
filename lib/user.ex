@@ -18,6 +18,10 @@ defmodule User do
         GenServer.cast(via_tuple(workerID), {:send_tweet, tweet})
     end
 
+    def subscribe(workerID, userID, to_followID) do
+        GenServer.call(via_tuple(workerID), {:subscribe, userID, to_followID})
+    end
+
     def query_tweet(workerID, query) do
         GenServer.call(via_tuple(workerID), {:query_tweet, query})
     end
@@ -28,7 +32,11 @@ defmodule User do
         #new_state = %{state | userID: userID}
         {:ok, state}  
     end
-
+    
+    @doc """
+    Connection API should return status = {userID, connection_status, followers, followings, tweets}
+    The first time it is connected, followers, followings, tweets are []
+    """
     def handle_call({:register_account, userID}, _from, state) do
         register_status = Server.register_account(userID)
         connected = 
@@ -52,6 +60,24 @@ defmodule User do
         tweets = [tweet | state[:tweets]]      
         new_state = %{state | tweets: tweets}        
         {:noreply, new_state}        
+    end
+
+    @doc """
+    Only add a new follower if the user successfully subscribes to it, i.e., the server returns :ok
+    """
+    def handle_call({:subscribe, userID, to_followID}, _from, state) do
+        subscribe_status = Server.subscribe(to_followID, userID)
+        case subscribe_status do
+            :ok -> 
+                followers = state[:followers]
+                follower_list = [to_followID | followers]
+                new_state = %{state | followers: follower_list}
+            :error ->
+                error_info = "Failed to subscribe to " <> to_followID
+                IO.puts error_info
+        end
+
+        {:reply, subscribe_status, state}
     end
 
     def handle_call({:query_tweet, query}, _from, state) do
