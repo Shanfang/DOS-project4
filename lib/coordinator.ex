@@ -62,7 +62,7 @@ defmodule Coordinator do
     def handle_call({:simulate_subscribe, following_num}, _from, state) do
         IO.puts "Start simulating subscription, each user is subscribing to #{following_num} other users..."
         user_list = state[:user_list]
-        simulate_subscription(user_list, following_num)
+        simulate_subscription(user_list, following_num, state[:tweet_store])
         {:reply, :ok, state}
     end
 
@@ -103,9 +103,9 @@ defmodule Coordinator do
 
     defp simulate_registeration(user_list) do
         Enum.each(user_list, fn(user) ->
-            #User.register_account(user, user)
-            register_status = User.register_account(user, user)
-            IO.puts "#{inspect user} is registered to server with status: #{ register_status}"
+            User.register_account(user, user)
+            #register_status = User.register_account(user, user)
+            #IO.puts "#{inspect user} is registered to server with status: #{ register_status}"
         end)
     end
 
@@ -122,21 +122,21 @@ defmodule Coordinator do
     After finish subscription, each user's following list should be
     updated in the ETS following_table table.
     """
-    defp simulate_subscription(user_list, following_num) do
+    defp simulate_subscription(user_list, following_num, tweetstore) do
         total_user = length(user_list)
         Enum.each(user_list, fn(user) ->
-            followings = subscribe(user, following_num, total_user, [], 0)
+            followings = subscribe(user, following_num, total_user, [], tweetstore, 0)
             :ets.insert(:following_table, {user, followings})                                    
         end)
     end
  
-    defp subscribe(user, following_num, total_user, following_list, count) when count < following_num do      
+    defp subscribe(user, following_num, total_user, following_list, tweetstore, count) when count < following_num do      
         to_follow = :rand.uniform(total_user) - 1 |> Integer.to_string
         cond do
             to_follow in following_list -> 
-                subscribe(user, following_num, total_user, following_list, count) 
+                subscribe(user, following_num, total_user, following_list, tweetstore, count) 
             to_follow == user ->
-                subscribe(user, following_num, total_user, following_list, count) 
+                subscribe(user, following_num, total_user, following_list, tweetstore, count) 
             true ->
                 subscribe_status = User.subscribe(user, user, to_follow) 
 
@@ -149,17 +149,19 @@ defmodule Coordinator do
 
                         # update user's following list
                         following_list = [to_follow | following_list]
-                        subscribe(user, following_num, total_user, following_list, count + 1)
-                        IO.puts "#{user} is following #{to_follow}"                       
+                        subscribe(user, following_num, total_user, following_list, tweetstore, count + 1)
+                        #IO.puts "#{user} is following #{to_follow}"  
+                        tweet = get_tweets(1, tweetstore)
+                        User.send_tweet(user, tweet)                     
                     :error -> 
-                        subscribe(user, following_num, total_user, following_list, count)                                        
+                        subscribe(user, following_num, total_user, following_list, tweetstore, count)                                        
                 end 
                           
         end
     end
 
     #defp subscribe(user, following_num, total_user, following_list, count) do
-    defp subscribe(_, _, _, following_list, _) do      
+    defp subscribe(_, _, _, following_list,_, _) do      
         following_list
     end
 
@@ -175,7 +177,7 @@ defmodule Coordinator do
         # popular_follower_list refers to all popular users' followers, each user has a popular follower list
         #popular_follower_list = :ets.select(:follower_table, select_followers)
         #:ets.select(:follower_table, fun)  
-        :ets.select(:follower_table, [{{:"$1", :"$2"}, [{:>=, {:length, :"$2"}, 2}], [:"$1"]}])    
+        :ets.select(:follower_table, [{{:"$1", :"$2"}, [{:>=, {:length, :"$2"}, 1000}], [:"$1"]}])    
     end
 
     @doc """
@@ -188,7 +190,7 @@ defmodule Coordinator do
         Enum.each(popular_users, fn(user) ->
             tweet = get_tweets(1, tweetstore) # 1 can be change to any number as required            
             User.send_tweet(user, tweet)                                                          
-            IO.puts "#{user} is ranked as popular user, it is sending a new tweet : #{tweet}"
+            #IO.puts "#{user} is ranked as popular user, it is sending a new tweet : #{tweet}"
             #Enum.each(tweets, fn(tweet) -> 
             #    User.send_tweet(user, tweet)                                                
             #end)                      
@@ -211,8 +213,8 @@ defmodule Coordinator do
     The return value is a list of tweets.
     """
     defp query_subscription(user_list) do
-        IO.puts "Start simulating query tweets by subscription..."        
-        test_user = Enum.random(user_list)
+        test_user = Enum.random(user_list)        
+        IO.puts "\nSimulating randomly selected user #{test_user} query tweets by subscription..."        
         User.query_tweet(test_user, "")        
     end
 
@@ -223,7 +225,7 @@ defmodule Coordinator do
         #topics = Enum.take_random(hashtag_store, 3)
         #topic = hashtag_store |> Enum.shuffle |> List.first
         topic = Enum.random(hashtag_store)
-        IO.puts "Simulating randomly selected user #{test_user} query tweets with #{topic}..."        
+        IO.puts "\nSimulating randomly selected user #{test_user} query tweets with #{topic}..."        
         User.query_tweet(test_user, topic) 
     end
 
@@ -231,7 +233,7 @@ defmodule Coordinator do
         test_user = Enum.random(user_list)
 
         mention_query = "@" <> test_user
-        IO.puts "Simulating randomly selected user #{test_user} query tweets with #{mention_query}..."                
+        IO.puts "\nSimulating randomly selected user #{test_user} query tweets with #{mention_query}..."                
         User.query_tweet(test_user, mention_query)
     end
 

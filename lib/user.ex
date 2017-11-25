@@ -94,12 +94,13 @@ defmodule User do
     case3: query mention, the result would be all the tweets that mentions this user.
     """
     defp print_tweets(userID, tweets) do
+        IO.puts "User: #{userID}'s query result is:"
         case length(tweets) do
             0 -> 
                 IO.puts "Oops, there is no matched tweet!"
             _ ->
                 Enum.each(tweets, fn(tweet) -> 
-                    IO.puts "User: #{userID}'s query result is:  #{tweet}"
+                    IO.puts tweet
                 end)
         end
     end
