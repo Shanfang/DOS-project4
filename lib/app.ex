@@ -15,23 +15,26 @@ defmodule App do
     def loop(num_of_clients, following_num, limit, n) when n > 0 do            
         Server.start_link
         IO.puts "Server is up and running..."
-        
+
         Coordinator.start_link(num_of_clients)
         IO.puts "#{inspect num_of_clients} users are started in the simulator..." 
 
         Coordinator.simulate_register_account(:coordinator)  
         IO.puts "Finished simulating registeration..."
-
+        IO.puts "================================================================="
+        
         Coordinator.simulate_subscribe(:coordinator, following_num)  
         IO.puts "Finished simulating subscription..."
+        IO.puts "================================================================="
         
         Coordinator.simulate_zipf_distribution(:coordinator, limit) 
-        zipf_info = "Finished simuling zipf's law and selecting popular users to send " <> limit <> " tweets..."
-        IO.puts zipf_info
+        IO.puts "Finished simuling zipf's distribution..."
+        IO.puts "================================================================="
         
         Coordinator.simulate_query(:coordinator)  
         IO.puts "Finished simulating query tweets..."
-
+        IO.puts "================================================================="
+        
         #Coordinator.simulate_user_connection(:coordinator)  
         #IO.puts "Finished simulating user connection..."
 

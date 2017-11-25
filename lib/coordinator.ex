@@ -60,7 +60,7 @@ defmodule Coordinator do
     end
 
     def handle_call({:simulate_subscribe, following_num}, _from, state) do
-        IO.puts "Start simulating subscription..."
+        IO.puts "Start simulating subscription, each user is subscribing to #{following_num} other users..."
         user_list = state[:user_list]
         simulate_subscription(user_list, following_num)
         {:reply, :ok, state}
@@ -68,27 +68,17 @@ defmodule Coordinator do
 
     def handle_call({:simulate_zipf_distribution, limit}, _from, state) do
         popular_users = get_popular_users(limit)
+        print_popular_users(popular_users, limit)
+
         tweetstore = state[:tweet_store]
         zipf_distribution_tweet(popular_users, tweetstore)
         {:reply, :ok, state}
     end
 
     def handle_call({:simulate_query}, _from, state) do
-        IO.puts "Start simulating query tweets subscribed to..."
         query_subscription(state[:user_list])
-        #subscriptions = query_subscription(state[:user_list])
-        #print_tweets(subscriptions)
-
-        IO.puts "Start simulating query tweets by hashtag to..."
         query_by_hashtag(state[:user_list], state[:hashtag_store])
-        #hashtag_tweets = query_by_hashtag(state[:user_list])
-        #print_tweets(hashtag_tweets)
-
-        IO.puts "Start simulating query tweets that mentions this user..."
-        query_by_mention(state[:user_list])
-        #mention_tweets = query_by_mention(state[:user_list)]
-        #print_tweets(mention_tweets)
-        
+        query_by_mention(state[:user_list])    
         {:reply, :ok, state}
     end
 
@@ -107,20 +97,15 @@ defmodule Coordinator do
         init_users(num_of_clients, user_list, num + 1)
     end
 
-    defp init_users(num_of_clients, user_list, num) do
+    defp init_users(_, user_list, _) do
         user_list
     end
 
-    @doc """
-    Simulate the process of user registering account.
-    """
     defp simulate_registeration(user_list) do
-        total_user = length(user_list)
         Enum.each(user_list, fn(user) ->
-            #user_pid = String.to_atom(user)
-            #register_status = User.register_account(user_pid, user)
+            #User.register_account(user, user)
             register_status = User.register_account(user, user)
-            IO.puts "#{inspect user} has register status: #{ register_status}"
+            IO.puts "#{inspect user} is registered to server with status: #{ register_status}"
         end)
     end
 
@@ -153,8 +138,6 @@ defmodule Coordinator do
             to_follow == user ->
                 subscribe(user, following_num, total_user, following_list, count) 
             true ->
-                #User_pid = String.to_atom(user)                
-                #subscribe_status = User.subscribe(User_pid, user, to_follow) 
                 subscribe_status = User.subscribe(user, user, to_follow) 
 
                 case subscribe_status do
@@ -167,6 +150,7 @@ defmodule Coordinator do
                         # update user's following list
                         following_list = [to_follow | following_list]
                         subscribe(user, following_num, total_user, following_list, count + 1)
+                        IO.puts "#{user} is following #{to_follow}"                       
                     :error -> 
                         subscribe(user, following_num, total_user, following_list, count)                                        
                 end 
@@ -174,7 +158,8 @@ defmodule Coordinator do
         end
     end
 
-    defp subscribe(user, following_num, total_user, following_list, count) do
+    #defp subscribe(user, following_num, total_user, following_list, count) do
+    defp subscribe(_, _, _, following_list, _) do      
         following_list
     end
 
@@ -203,6 +188,7 @@ defmodule Coordinator do
         Enum.each(popular_users, fn(user) ->
             tweet = get_tweets(1, tweetstore) # 1 can be change to any number as required            
             User.send_tweet(user, tweet)                                                          
+            IO.puts "#{user} is ranked as popular user, it is sending a new tweet : #{tweet}"
             #Enum.each(tweets, fn(tweet) -> 
             #    User.send_tweet(user, tweet)                                                
             #end)                      
@@ -214,17 +200,19 @@ defmodule Coordinator do
         tweetstore |> Enum.shuffle |> List.first
     end
 
-    defp tweet_zipf()do
-        
-    end
+    defp print_popular_users(users, limit) do
+        Enum.each(users, fn(user)-> 
+            IO.puts "#{user} is a popular user with #{limit} followers"
+        end)
+    end 
+
     @doc """
     For the following three query types, each randomly select 1 users to simulate query operation.
     The return value is a list of tweets.
     """
     defp query_subscription(user_list) do
+        IO.puts "Start simulating query tweets by subscription..."        
         test_user = Enum.random(user_list)
-        #User_pid = String.to_atom(test_user)
-        #User.query_tweet(User_pid, :subscription)
         User.query_tweet(test_user, "")        
     end
 
@@ -235,17 +223,15 @@ defmodule Coordinator do
         #topics = Enum.take_random(hashtag_store, 3)
         #topic = hashtag_store |> Enum.shuffle |> List.first
         topic = Enum.random(hashtag_store)
-        #User_pid = String.to_atom(test_user)
-        hashtag_query = "#" <> topic
-        #User.query_tweet(User_pid, hashtag_query)
-        User.query_tweet(test_user, hashtag_query)        
+        IO.puts "Simulating randomly selected user #{test_user} query tweets with #{topic}..."        
+        User.query_tweet(test_user, topic) 
     end
 
     defp query_by_mention(user_list) do
         test_user = Enum.random(user_list)
 
-        #User_pid = String.to_atom(test_user)
         mention_query = "@" <> test_user
+        IO.puts "Simulating randomly selected user #{test_user} query tweets with #{mention_query}..."                
         User.query_tweet(test_user, mention_query)
     end
 

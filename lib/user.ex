@@ -3,7 +3,7 @@ defmodule User do
     ######################### client API ####################
 
     def start_link(userID) do
-        GenServer.start_link(__MODULE__, userID, name: via_tuple(userID))
+        GenServer.start_link(__MODULE__, [], name: via_tuple(userID))
     end
 
     defp via_tuple(userID) do
@@ -27,7 +27,7 @@ defmodule User do
     end
     ######################### callbacks ####################
 
-    def init(userID) do
+    def init([]) do
         state = %{userID: "", connected: false, followers: [], followings: [], tweets: []}   
         #new_state = %{state | userID: userID}
         {:ok, state}  
@@ -82,15 +82,25 @@ defmodule User do
 
     def handle_call({:query_tweet, query}, _from, state) do
         query_result = Server.query_tweet(query, state[:userID])
-        print_tweets(query_result)
+        print_tweets(state[:userID], query_result)
         {:reply, query_result, state} 
     end
 
     ######################### helper functions ####################
-
-    defp print_tweets(tweets) do
-        Enum.each(tweets, fn(tweet) -> 
-            IO. puts tweet
-        end)
+    @doc """
+    The query result does not distinguish btw the 3 types. So 
+    case1: query subscription, the result would be all the tweets on the user's timeline. 
+    case2: query hashtag, the result would be all the tweets under this topic, i.e., marked with this hashtag.
+    case3: query mention, the result would be all the tweets that mentions this user.
+    """
+    defp print_tweets(userID, tweets) do
+        case length(tweets) do
+            0 -> 
+                IO.puts "Oops, there is no matched tweet!"
+            _ ->
+                Enum.each(tweets, fn(tweet) -> 
+                    IO.puts "User: #{userID}'s query result is:  #{tweet}"
+                end)
+        end
     end
 end
