@@ -25,6 +25,10 @@ defmodule User do
     def query_tweet(workerID, query) do
         GenServer.call(via_tuple(workerID), {:query_tweet, query}, :infinity)
     end
+
+    def connect(workerID) do
+        GenServer.call(via_tuple(workerID), {:connect}, :infinity)
+    end
     ######################### callbacks ####################
 
     def init([]) do
@@ -86,6 +90,19 @@ defmodule User do
         {:reply, query_result, state} 
     end
 
+    @doc """
+    Once the user is connected, the server returns the user's tweets (including 
+    the user's own tweets and his/her followers' tweets) and those tweets that mentions
+    this user.
+    time_line is a tuple {[tweets], [mentions]}
+    """
+    def handle_call({:connect}, _from, state) do
+        time_line = Server.connect(state[:userID])
+        print_timeline(state[:userID], time_line)
+        new_state = %{state | tweets: elem(time_line, 0)}        
+        {:reply, :ok, new_state}
+    end
+
     ######################### helper functions ####################
     @doc """
     The query result does not distinguish btw the 3 types. So 
@@ -101,6 +118,37 @@ defmodule User do
             _ ->
                 Enum.each(tweets, fn(tweet) -> 
                     IO.puts tweet
+                end)
+        end
+    end
+
+    defp print_timeline(userID, time_line) do
+        IO.puts "\nUser: #{userID}'s timeline is:"
+        tweets = elem(time_line, 0) # all tweets that this user subscribed
+        mentions = elem(time_line, 1) # all the tweets that mentions this user
+        cond do
+            length(tweets) == 0 && length(mentions) == 0 ->
+                IO.puts "Oops, your timeline is blank!"
+            length(mentions) == 0 ->
+                IO.puts "Tweets from your subscription:"                                
+                Enum.each(tweets, fn(tweet) -> 
+                    IO.puts tweet
+                end)
+            length(tweets) == 0 ->
+                IO.puts "Tweets that mentions you:"
+                Enum.each(mentions, fn(mention) -> 
+                    # mention is a tuple {"shanfang", "Are you working on the project @shanfang?"}
+                    IO.puts elem(mention, 1) 
+                end)
+            true ->
+                IO.puts "Tweets from your subscription:"                
+                Enum.each(tweets, fn(tweet) -> 
+                    IO.puts tweet
+                end)
+
+                IO.puts "\nTweets that mentions you:"                
+                Enum.each(mentions, fn(mention) -> 
+                    IO.puts elem(mention, 1) 
                 end)
         end
     end

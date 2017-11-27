@@ -214,7 +214,7 @@ defmodule Coordinator do
     """
     defp query_subscription(user_list) do
         test_user = Enum.random(user_list)        
-        IO.puts "\nSimulating randomly selected user #{test_user} query tweets by subscription..."        
+        IO.puts "\nSimulating randomly selected user #{test_user} to query tweets by subscription..."        
         User.query_tweet(test_user, "")        
     end
 
@@ -225,7 +225,7 @@ defmodule Coordinator do
         #topics = Enum.take_random(hashtag_store, 3)
         #topic = hashtag_store |> Enum.shuffle |> List.first
         topic = Enum.random(hashtag_store)
-        IO.puts "\nSimulating randomly selected user #{test_user} query tweets with #{topic}..."        
+        IO.puts "\nSimulating randomly selected user #{test_user} to query tweets with #{topic}..."        
         User.query_tweet(test_user, topic) 
     end
 
@@ -233,7 +233,7 @@ defmodule Coordinator do
         test_user = Enum.random(user_list)
 
         mention_query = "@" <> test_user
-        IO.puts "\nSimulating randomly selected user #{test_user} query tweets with #{mention_query}..."                
+        IO.puts "\nSimulating randomly selected user #{test_user} to query tweets with #{mention_query}..."                
         User.query_tweet(test_user, mention_query)
     end
 
@@ -243,7 +243,6 @@ defmodule Coordinator do
     """
     defp simulate_connection(user_list, num) do
         Enum.take_random(user_list, 5) 
-            |> Enum.each(fn(user) -> 
-                user |> String.to_atom |> User.connect end)        
+            |> Enum.each(fn(user) -> user |> User.connect end)        
     end
 end

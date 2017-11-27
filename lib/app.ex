@@ -33,10 +33,11 @@ defmodule App do
         
         Coordinator.simulate_query(:coordinator)  
         IO.puts "Finished simulating query tweets..."
-        IO.puts "================================================================="
+        IO.puts "=================================================================" 
         
-        #Coordinator.simulate_user_connection(:coordinator)  
-        #IO.puts "Finished simulating user connection..."
+        Coordinator.simulate_user_connection(:coordinator)  
+        IO.puts "Finished simulating user connection..."
+        IO.puts "================================================================="        
 
         #loop(num_of_clients, following_num, limit, n - 1)
     end

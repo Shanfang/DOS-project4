@@ -7,9 +7,9 @@ defmodule Server do
         GenServer.start_link(__MODULE__, :ok, opts ++ [name: SERVER])        
     end
 
-    def connect(userID) do
-        GenServer.call(@name, {:connect, userID}, :infinity)                
-    end
+    # def connect(userID) do
+    #     GenServer.call(@name, {:connect, userID}, :infinity)                
+    # end
 
     def register_account(userID) do
         GenServer.call(@name, {:register_account, userID}, :infinity)        
@@ -50,17 +50,19 @@ defmodule Server do
 
     @doc """
     When a registered user is connected, push all tweets from his/her subscription
+    and all the tweets that mentions this user.
     """
     def handle_call({:connect, userID}, _from, state) do
-        tweets = 
-            case user_status(userID) do
-                :ok ->
-                    :ets.lookup(:user_table, userID) |> List.first |> elem(3)
-                :error ->
-                    IO.puts "You are not registered, try it out now!"
-                    []
-            end
-        {:reply, tweets, state}       
+        tweets = []
+        mentions = []
+        case user_status(userID) do
+            :ok ->
+                tweets = :ets.lookup(:user_table, userID) |> List.first |> elem(3)
+                mentions = :ets.lookup(:mention_table, userID)
+            :error ->
+                IO.puts "You are not registered, try it out now!"
+        end
+        {:reply, {tweets, mentions}, state}       
     end
 
     @doc """
@@ -93,7 +95,7 @@ defmodule Server do
                 :ets.insert(:hash_tag_table, {tag, tweet})
             {:mention, mention} ->
                 :ets.insert(:mention_table, {mention, tweet})   
-            :plain_tweet ->
+            # :plain_tweet ->
         end       
         {:noreply, state}
     end
@@ -190,7 +192,7 @@ defmodule Server do
     defp tweet_type(tweet) do
         result = 
             cond do
-                tweet =~ "#" ->
+                tweet =~ "#" -> # may need to configure for multiple hashtags
                     hash_tag = 
                     String.split(tweet, ~r{#}, parts: 2) # regular expression to match # and split with that
                     |> List.last
@@ -203,6 +205,7 @@ defmodule Server do
                     |> List.last
                     |> String.split(~r{\s}, trim: true)
                     |> List.first
+                    |> to_string
                     {:mention, mention}
                 true ->
                     :plain_tweet
