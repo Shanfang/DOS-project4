@@ -88,20 +88,25 @@ defmodule Coordinator do
 
         # return value like this {[user1, user2], [user1's follower_num, user2's follower_num]}
         tuple_of_two_list = config_popular_users(following_num, state[:users_num], state[:user_list]) 
-        
+        IO.puts "Finished configure 5 populars such that their number of followers follow zipf's distribution"
         # init_followers return [{user, [follower_list]}, {}, {}]
         listfollower_list = init_followers(elem(tuple_of_two_list, 0), elem(tuple_of_two_list, 1), state, [], 0)
                             |> subscribe_to_popular_user
-        start_time = :os.system_time(:millisecond)
-        popular_user_send_tweet(elem(tuple_of_two_list, 0), tweetstore, limit)
-        end_time = :os.system_time(:millisecond)
 
+        IO.puts "Finished subscribing to popular users"
+        start_time = System.monotonic_time(:nanosecond )
+        # IO.inspect start_time
+        popular_user_send_tweet(elem(tuple_of_two_list, 0), tweetstore, limit)
+        end_time = System.monotonic_time(:nanosecond )
+        IO.puts "Each popular users finished sending #{limit} tweets"
+        # IO.inspect end_time
         popular_user_num = elem(tuple_of_two_list, 0) |> length
         delta_time = end_time - start_time
+        IO.inspect "Time passed is #{delta_time} nanoseconds"
         total_tweets = limit *  popular_user_num
-        # TPS = total_tweets * 1000 / delta_time  # TPS is tweet per second
-        # TPS = total_tweets / delta_time * 1000 |> Float.ceil |> Float.to_string
-        # IO.puts "TPS is: #{TPS}"
+        IO.inspect "Total tweets is #{total_tweets}"
+
+        IO.puts "Tweets Per Second is: #{Float.ceil(total_tweets * 1000000000 / delta_time)}"
         {:reply, :ok, state}
     end   
 
@@ -210,7 +215,7 @@ defmodule Coordinator do
         popular_users = Enum.take_random(user_list, 5) 
         total_followers = following_num * users_num
         follower_num = Enum.reduce([5,4,3,2,1], [], fn(x, acc) -> 
-                            [0.1 / x *total_followers |> Float.ceil |> round | acc]
+                            [0.1 / x * total_followers |> Float.ceil |> round | acc]
                         end)
 
         # returns a list of tuples[{userID1, num_of_followers1}, {userID2, num_of_followers2}, {userID3, num_of_followers3}]    
@@ -229,6 +234,7 @@ defmodule Coordinator do
     end
     
     defp init_followers(_, _, _, result_tuple_list, _) do
+        IO.puts "Finished initiating popular users' followers"
         result_tuple_list  #return the list of tuples
     end
 

@@ -6,15 +6,20 @@ defmodule Client.Mixfile do
       app: :client,
       version: "0.1.0",
       elixir: "~> 1.5",
-      escript: escript(),                        
+      # escript: escript(),                        
       start_permanent: Mix.env == :prod,
-      deps: deps()
+      deps: deps(),
+      emu_args: [ "+P 5000000" ],
+      escript: [
+        main_module: App,
+        emu_args: [ "+P 5000000" ],
+      ]
     ]
   end
 
-  def escript() do
-    [main_module: App]
-  end
+  # def escript() do
+  #   [main_module: App]
+  # end
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
