@@ -18,6 +18,10 @@ defmodule User do
         GenServer.cast(via_tuple(workerID), {:send_tweet, tweet})
     end
 
+    def re_tweet(workerID, tweets) do
+        GenServer.cast(via_tuple(workerID), {:re_tweet, tweets})
+    end
+
     def subscribe(workerID, userID, to_followID) do
         GenServer.call(via_tuple(workerID), {:subscribe, userID, to_followID}, :infinity)
     end
@@ -61,6 +65,14 @@ defmodule User do
 
     def handle_cast({:send_tweet, tweet}, state) do
         Server.send_tweet(tweet, state[:userID])
+        tweets = [tweet | state[:tweets]]      
+        new_state = %{state | tweets: tweets}        
+        {:noreply, new_state}        
+    end
+
+
+    def handle_cast({:re_tweet, tweet}, state) do
+        Server.re_tweet(tweet, state[:userID])
         tweets = [tweet | state[:tweets]]      
         new_state = %{state | tweets: tweets}        
         {:noreply, new_state}        

@@ -4,11 +4,9 @@ defmodule App do
     The simulator simulates clients sending tweets and receiving tweets.
     """
     def main(args) do
-        clients = Enum.at(args, 0)
-        following_num = Enum.at(args, 1)
-        limit = Enum.at(args, 2)
-        num_of_clients = String.to_integer(clients)  
-        following_num = String.to_integer(following_num)
+        num_of_clients = Enum.at(args, 0) |> String.to_integer
+        following_num = Enum.at(args, 1) |> String.to_integer
+        limit = Enum.at(args, 2) |> String.to_integer
         loop(num_of_clients, following_num, limit, 1)
     end
 
@@ -23,14 +21,18 @@ defmodule App do
         IO.puts "Finished simulating registeration..."
         IO.puts "================================================================="
         
-        Coordinator.simulate_subscribe(:coordinator, following_num)  
-        IO.puts "Finished simulating subscription..."
-        IO.puts "================================================================="
+        # Coordinator.simulate_subscribe(:coordinator, following_num)  
+        # IO.puts "Finished simulating subscription..."
+        # IO.puts "================================================================="
         
-        Coordinator.simulate_zipf_distribution(:coordinator, limit) 
+        Coordinator.simulate_zipf_distribution(:coordinator, following_num, limit) 
         IO.puts "Finished simuling zipf's distribution..."
         IO.puts "================================================================="
-        
+
+        # Coordinator.simulate_retweet(:coordinator)  
+        # IO.puts "Finished simulating re-tweet..."
+        # IO.puts "=================================================================" 
+
         Coordinator.simulate_query(:coordinator)  
         IO.puts "Finished simulating query tweets..."
         IO.puts "=================================================================" 
@@ -42,7 +44,7 @@ defmodule App do
         #loop(num_of_clients, following_num, limit, n - 1)
     end
 
-    def loop(num_of_clients, following_num, limit, n) do
+    def loop(num_of_clients, following_num,limit, n) do
         :timer.sleep 1000
         loop(num_of_clients, following_num, limit, n)
     end

@@ -11,16 +11,20 @@ defmodule Coordinator do
     def simulate_register_account(coordinator) do
         GenServer.call(coordinator, {:simulate_register_account}, :infinity)
     end
-    # init clients using the input parameters
+
+    # this api is deprecated, subscription is simulated in the zipf's distribution simulation
     def simulate_subscribe(coordinator, following_num) do
         # set timeout to be very infinity because the subscription takes long time
         GenServer.call(coordinator, {:simulate_subscribe, following_num}, :infinity)
     end
 
-    def simulate_zipf_distribution(coordinator, limit) do
-        GenServer.call(coordinator, {:simulate_zipf_distribution, limit}, :infinity)
+    def simulate_zipf_distribution(coordinator, following_num, limit) do
+        GenServer.call(coordinator, {:simulate_zipf_distribution, following_num, limit}, :infinity)
     end
 
+    # def simulate_retweet(coordiantor) do
+    #     GenServer.all(coordinator, {:simulate_retweet}, :infinity)
+    # end
     def simulate_query(coordinator) do
         GenServer.call(coordinator, {:simulate_query}, :infinity)
     end
@@ -31,7 +35,7 @@ defmodule Coordinator do
 
     ######################### callbacks ####################
     def init(num_of_clients) do
-        state = %{tweet_store: [], hashtag_store: [], user_list: []}
+        state = %{tweet_store: [], hashtag_store: [], user_list: [], users_num: num_of_clients}
         :random.seed(:os.timestamp)
 
         # read tweets from a file, these tweets are used by users in the simulation process
@@ -66,12 +70,50 @@ defmodule Coordinator do
         {:reply, :ok, state}
     end
 
-    def handle_call({:simulate_zipf_distribution, limit}, _from, state) do
-        popular_users = get_popular_users(limit)
-        print_popular_users(popular_users, limit)
-
+    @doc """
+    I follow the description from this link to set the constant in zipf's distribution
+    http://mathworld.wolfram.com/ZipfsLaw.html
+    First, assuming users 1,2,3,4,5 are the top 5 popular users(userID does not matter, 
+    for simplity I choose the first 5 users), calculate each of their followers numbers 
+    such that the distribution follows zipf's distribution. F(i) is the numnber of followers
+    for user that is ranked as the ith most popular. For example,
+    F(1) = 0.1 / 1 * users_num * following_num
+    F(2) = 0.1 / 2 * users_num * following_num
+    F(3) = 0.1 / 3 * users_num * following_num
+    F(4) = 0.1 / 4 * users_num * following_num
+    F(5) = 0.1 / 5 * users_num * following_num
+    """
+    def handle_call({:simulate_zipf_distribution, following_num, limit}, _from, state) do   
         tweetstore = state[:tweet_store]
-        zipf_distribution_tweet(popular_users, tweetstore)
+
+        # return value like this {[user1, user2], [user1's follower_num, user2's follower_num]}
+        tuple_of_two_list = config_popular_users(following_num, state[:users_num], state[:user_list]) 
+        
+        # init_followers return [{user, [follower_list]}, {}, {}]
+        listfollower_list = init_followers(elem(tuple_of_two_list, 0), elem(tuple_of_two_list, 1), state, [], 0)
+                            |> subscribe_to_popular_user
+        start_time = :os.system_time(:millisecond)
+        popular_user_send_tweet(elem(tuple_of_two_list, 0), tweetstore, limit)
+        end_time = :os.system_time(:millisecond)
+
+        popular_user_num = elem(tuple_of_two_list, 0) |> length
+        delta_time = end_time - start_time
+        total_tweets = limit *  popular_user_num
+        # TPS = total_tweets * 1000 / delta_time  # TPS is tweet per second
+        # TPS = total_tweets / delta_time * 1000 |> Float.ceil |> Float.to_string
+        # IO.puts "TPS is: #{TPS}"
+        {:reply, :ok, state}
+    end   
+
+    @doc """
+    Randomly select half the users to retweet once if its tweets timeline is not empty
+    """
+    def handle_call({:simulate_retweet},_from, state) do
+        test_user_list = Enum.take_random(state[:user_list], state[:users_num])
+        tweet = get_tweets(1, state[:tweetstore])
+        Enum.each(test_user_list, fn(user) -> 
+            User.retweet(user, tweet)
+        end)
         {:reply, :ok, state}
     end
 
@@ -160,46 +202,56 @@ defmodule Coordinator do
         end
     end
 
-    #defp subscribe(user, following_num, total_user, following_list, count) do
     defp subscribe(_, _, _, following_list,_, _) do      
         following_list
     end
 
-    @doc """
-    Select users whose number of followers is >= limit, which means only select the popular users.
-    The criteria of popular or not is set by the parameter limit.
-    """
-    defp get_popular_users(limit) do
-        #select_followers = :ets.fun2ms(fn {username, followers} when length(followers) >= limit -> followers end)
-        
-        #fun = :ets.fun2ms(fn {username, followers} when length(followers) >= 2 -> username end)
-        
-        # popular_follower_list refers to all popular users' followers, each user has a popular follower list
-        #popular_follower_list = :ets.select(:follower_table, select_followers)
-        #:ets.select(:follower_table, fun)  
-        :ets.select(:follower_table, [{{:"$1", :"$2"}, [{:>=, {:length, :"$2"}, 1000}], [:"$1"]}])    
+    defp config_popular_users(following_num, users_num, user_list) do
+        popular_users = Enum.take_random(user_list, 5) 
+        total_followers = following_num * users_num
+        follower_num = Enum.reduce([5,4,3,2,1], [], fn(x, acc) -> 
+                            [0.1 / x *total_followers |> Float.ceil |> round | acc]
+                        end)
+
+        # returns a list of tuples[{userID1, num_of_followers1}, {userID2, num_of_followers2}, {userID3, num_of_followers3}]    
+        #Enum.zip(popular_users, follower_num)
+        {popular_users, follower_num}
     end
 
-    @doc """
-    Simulate zipf's distribution and only let popular users to send tweets.
-    The popular users randomly select tweet from the tweet store and tweet it.
-    The number of tweets each user is supposed to send can be configured in the config file,
-    here I use default 1.
-    """
-    defp zipf_distribution_tweet(popular_users, tweetstore) do
+    defp init_followers(popular_users, follower_num_list, state, result_tuple_list, index) when index < length(popular_users) do
+        user = Enum.at(popular_users, index)
+        follower_num = Enum.at(follower_num_list, index)
+        
+        followers = Enum.filter(state[:user_list], fn(candidate) -> candidate != user end)
+                    |> Enum.take_random(follower_num)
+        result_tuple_list = [{user, followers} | result_tuple_list]
+        init_followers(popular_users, follower_num_list, state, result_tuple_list, index + 1)
+    end
+    
+    defp init_followers(_, _, _, result_tuple_list, _) do
+        result_tuple_list  #return the list of tuples
+    end
+
+    defp subscribe_to_popular_user(tuple_list) do
+        Enum.each(tuple_list, fn(tuple) -> # tuple is of form{popular_userID, [its followers' ID]}
+            Enum.each(elem(tuple, 1), fn(follower) -> 
+                User.subscribe(follower, follower, elem(tuple, 0))                
+            end)
+        end)   
+    end
+
+    # limit is used to test the peak number of tweets from popular users that the system can handle  
+    defp popular_user_send_tweet(popular_users, tweetstore, limit) do
         Enum.each(popular_users, fn(user) ->
-            tweet = get_tweets(1, tweetstore) # 1 can be change to any number as required            
-            User.send_tweet(user, tweet)                                                          
-            #IO.puts "#{user} is ranked as popular user, it is sending a new tweet : #{tweet}"
-            #Enum.each(tweets, fn(tweet) -> 
-            #    User.send_tweet(user, tweet)                                                
-            #end)                      
-        end)    
+            get_tweets(limit, tweetstore)            
+            |> Enum.each(fn(tweet) -> User.send_tweet(user, tweet) end)                                                                           
+        end)   
     end
  
     # I set num default to 1 in the test, so that it would not take too long time.
     defp get_tweets(num, tweetstore) do
-        tweetstore |> Enum.shuffle |> List.first
+        #tweetstore |> Enum.shuffle |> List.first
+        Enum.take_random(tweetstore, num)
     end
 
     defp print_popular_users(users, limit) do
