@@ -88,7 +88,7 @@ defmodule Coordinator do
 
         # return value like this {[user1, user2], [user1's follower_num, user2's follower_num]}
         tuple_of_two_list = config_popular_users(following_num, state[:users_num], state[:user_list]) 
-        IO.puts "Finished configure 5 populars such that their number of followers follow zipf's distribution"
+        IO.puts "Finished configure 5 popular users such that their number of followers follow zipf's distribution"
         # init_followers return [{user, [follower_list]}, {}, {}]
         listfollower_list = init_followers(elem(tuple_of_two_list, 0), elem(tuple_of_two_list, 1), state, [], 0)
                             |> subscribe_to_popular_user
@@ -217,6 +217,8 @@ defmodule Coordinator do
         follower_num = Enum.reduce([5,4,3,2,1], [], fn(x, acc) -> 
                             [0.1 / x * total_followers |> Float.ceil |> round | acc]
                         end)
+
+
 
         # returns a list of tuples[{userID1, num_of_followers1}, {userID2, num_of_followers2}, {userID3, num_of_followers3}]    
         #Enum.zip(popular_users, follower_num)
