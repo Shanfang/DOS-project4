@@ -95,7 +95,7 @@ defmodule Server do
                 :ets.insert(:hash_tag_table, {tag, tweet})
             {:mention, mention} ->
                 :ets.insert(:mention_table, {mention, tweet})   
-            # :plain_tweet ->
+            :plain_tweet ->
         end       
         {:noreply, state}
     end

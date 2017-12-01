@@ -141,16 +141,16 @@ defmodule User do
         cond do
             length(tweets) == 0 && length(mentions) == 0 ->
                 IO.puts "Oops, your timeline is blank!"
-            length(mentions) == 0 ->
-                IO.puts "Tweets from your subscription:"                                
-                Enum.each(tweets, fn(tweet) -> 
-                    IO.puts tweet
-                end)
             length(tweets) == 0 ->
                 IO.puts "Tweets that mentions you:"
                 Enum.each(mentions, fn(mention) -> 
                     # mention is a tuple {"shanfang", "Are you working on the project @shanfang?"}
                     IO.puts elem(mention, 1) 
+                end)
+            length(mentions) == 0 ->
+                IO.puts "Tweets from your subscription:"                                
+                Enum.each(tweets, fn(tweet) -> 
+                    IO.puts tweet
                 end)
             true ->
                 IO.puts "Tweets from your subscription:"                

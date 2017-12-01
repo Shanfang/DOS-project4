@@ -73,9 +73,10 @@ defmodule Coordinator do
     @doc """
     I follow the description from this link to set the constant in zipf's distribution
     http://mathworld.wolfram.com/ZipfsLaw.html
-    First, assuming users 1,2,3,4,5 are the top 5 popular users(userID does not matter, 
-    for simplity I choose the first 5 users), calculate each of their followers numbers 
-    such that the distribution follows zipf's distribution. F(i) is the numnber of followers
+    Take the top 20% users as popular users, calculate each of their followers numbers 
+    such that the distribution follows zipf's distribution(the top 20% users has 80% of all the followers).
+    
+    F(i) is the numnber of followers
     for user that is ranked as the ith most popular. For example,
     F(1) = 0.1 / 1 * users_num * following_num
     F(2) = 0.1 / 2 * users_num * following_num
@@ -88,7 +89,7 @@ defmodule Coordinator do
 
         # return value like this {[user1, user2], [user1's follower_num, user2's follower_num]}
         tuple_of_two_list = config_popular_users(following_num, state[:users_num], state[:user_list]) 
-        IO.puts "Finished configure 5 popular users such that their number of followers follow zipf's distribution"
+        IO.puts "Finished configure top 20% popular users such that their number of followers follow zipf's distribution"
         # init_followers return [{user, [follower_list]}, {}, {}]
         listfollower_list = init_followers(elem(tuple_of_two_list, 0), elem(tuple_of_two_list, 1), state, [], 0)
                             |> subscribe_to_popular_user
@@ -212,13 +213,14 @@ defmodule Coordinator do
     end
 
     defp config_popular_users(following_num, users_num, user_list) do
-        popular_users = Enum.take_random(user_list, 5) 
-        total_followers = following_num * users_num
-        follower_num = Enum.reduce([5,4,3,2,1], [], fn(x, acc) -> 
+        popular_user_num = users_num * 0.2 |> Float.ceil |> round
+        reverse_list = 1..popular_user_num |> Enum.to_list |> Enum.reverse
+        
+        popular_users = Enum.take_random(user_list, popular_user_num) 
+        total_followers = following_num * users_num * 0.8 |> Float.ceil |> round
+        follower_num = Enum.reduce(reverse_list, [], fn(x, acc) -> 
                             [0.1 / x * total_followers |> Float.ceil |> round | acc]
                         end)
-
-
 
         # returns a list of tuples[{userID1, num_of_followers1}, {userID2, num_of_followers2}, {userID3, num_of_followers3}]    
         #Enum.zip(popular_users, follower_num)

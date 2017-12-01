@@ -41,7 +41,7 @@ defmodule App do
         IO.puts "Finished simulating user connection..."
         IO.puts "================================================================="        
 
-        #loop(num_of_clients, following_num, limit, n - 1)
+        loop(num_of_clients, following_num, limit, n - 1)
     end
 
     def loop(num_of_clients, following_num,limit, n) do
