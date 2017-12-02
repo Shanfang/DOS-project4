@@ -21,22 +21,19 @@ defmodule App do
         IO.puts "Finished simulating registeration..."
         IO.puts "================================================================="
         
-        # Coordinator.simulate_subscribe(:coordinator, following_num)  
-        # IO.puts "Finished simulating subscription..."
-        # IO.puts "================================================================="
-        
         Coordinator.simulate_zipf_distribution(:coordinator, following_num, limit) 
         IO.puts "Finished simuling zipf's distribution..."
         IO.puts "================================================================="
 
-        # Coordinator.simulate_retweet(:coordinator)  
-        # IO.puts "Finished simulating re-tweet..."
-        # IO.puts "=================================================================" 
+        Coordinator.simulate_retweet(:coordinator)  
+        IO.puts "Finished simulating re_tweet..."
+        IO.puts "=================================================================" 
 
         Coordinator.simulate_query(:coordinator)  
         IO.puts "Finished simulating query tweets..."
         IO.puts "=================================================================" 
         
+        IO.puts "Start simulating user connection, user's timeline will be automatically updated..."        
         Coordinator.simulate_user_connection(:coordinator)  
         IO.puts "Finished simulating user connection..."
         IO.puts "================================================================="        

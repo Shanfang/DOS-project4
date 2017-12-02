@@ -7,9 +7,9 @@ defmodule Server do
         GenServer.start_link(__MODULE__, :ok, opts ++ [name: SERVER])        
     end
 
-    # def connect(userID) do
-    #     GenServer.call(@name, {:connect, userID}, :infinity)                
-    # end
+    def connect(userID) do
+        GenServer.call(@name, {:connect, userID}, :infinity)                
+    end
 
     def register_account(userID) do
         GenServer.call(@name, {:register_account, userID}, :infinity)        
@@ -24,16 +24,16 @@ defmodule Server do
     end
 
     def re_tweet(tweet, userID) do
-        GenServer.call(@name, {:re_tweet, tweet, userID})
+        GenServer.cast(@name, {:re_tweet, tweet, userID})
     end
 
     def query_tweet(query, userID) do
         GenServer.call(@name, {:query_tweet, query, userID}, :infinity)        
     end
 
-    def connect(userID) do
-        GenServer.call(@name, {:connect, userID})                
-    end
+    # def connect(userID) do
+    #     GenServer.call(@name, {:connect, userID})                
+    # end
 
     def stop(SERVER) do
         GenServer.stop(@name)

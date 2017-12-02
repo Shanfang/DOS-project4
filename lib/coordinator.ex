@@ -22,9 +22,9 @@ defmodule Coordinator do
         GenServer.call(coordinator, {:simulate_zipf_distribution, following_num, limit}, :infinity)
     end
 
-    # def simulate_retweet(coordiantor) do
-    #     GenServer.all(coordinator, {:simulate_retweet}, :infinity)
-    # end
+    def simulate_retweet(coordinator) do
+        GenServer.call(coordinator, {:simulate_retweet}, :infinity)
+    end
     def simulate_query(coordinator) do
         GenServer.call(coordinator, {:simulate_query}, :infinity)
     end
@@ -116,9 +116,9 @@ defmodule Coordinator do
     """
     def handle_call({:simulate_retweet},_from, state) do
         test_user_list = Enum.take_random(state[:user_list], state[:users_num])
-        tweet = get_tweets(1, state[:tweetstore])
+        tweet = get_tweets(1, state[:tweet_store]) |> List.first
         Enum.each(test_user_list, fn(user) -> 
-            User.retweet(user, tweet)
+            User.re_tweet(user, tweet)
         end)
         {:reply, :ok, state}
     end
@@ -199,7 +199,7 @@ defmodule Coordinator do
                         following_list = [to_follow | following_list]
                         subscribe(user, following_num, total_user, following_list, tweetstore, count + 1)
                         #IO.puts "#{user} is following #{to_follow}"  
-                        tweet = get_tweets(1, tweetstore)
+                        tweet = get_tweets(1, tweetstore) |> List.first
                         User.send_tweet(user, tweet)                     
                     :error -> 
                         subscribe(user, following_num, total_user, following_list, tweetstore, count)                                        
