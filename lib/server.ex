@@ -31,10 +31,6 @@ defmodule Server do
         GenServer.call(@name, {:query_tweet, query, userID}, :infinity)        
     end
 
-    # def connect(userID) do
-    #     GenServer.call(@name, {:connect, userID})                
-    # end
-
     def stop(SERVER) do
         GenServer.stop(@name)
     end
