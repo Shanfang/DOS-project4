@@ -140,7 +140,10 @@ defmodule Coordinator do
 
     defp init_users(num_of_clients, user_list, num) when num < num_of_clients do
         user = num |> Integer.to_string         
-        User.start_link(user) 
+        # User.start_link(user) 
+
+        SocketClient.start_link(user)
+
         user_list = [user | user_list]
         init_users(num_of_clients, user_list, num + 1)
     end
@@ -151,7 +154,10 @@ defmodule Coordinator do
 
     defp simulate_registeration(user_list) do
         Enum.each(user_list, fn(user) ->
-            User.register_account(user, user)
+            # IO.puts "Start the registration process..."
+            #SocketClient.start_link(user)
+
+            # User.register_account(user, user)
             #register_status = User.register_account(user, user)
             #IO.puts "#{inspect user} is registered to server with status: #{ register_status}"
         end)
